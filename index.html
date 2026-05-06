@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendário de Disponibilidade — Teatro</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #f0ece4;
+    --text-muted: #888070;
+    --text-dim: #4a4540;
+    --gold: #c9a84c;
+    --gold-dim: #7a5f24;
+    --gold-bg: rgba(201,168,76,0.08);
+    --green: #4a9c6f;
+    --green-bg: rgba(74,156,111,0.10);
+    --green-border: rgba(74,156,111,0.30);
+    --busy-bg: #161616;
+    --busy-text: #3a3530;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .stage-bg {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 30% at 50% 0%, rgba(201,168,76,0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(30,20,10,0.8) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .curtain-left, .curtain-right {
+    position: fixed;
+    top: 0; bottom: 0;
+    width: 18px;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .curtain-left {
+    left: 0;
+    background: linear-gradient(to right, rgba(10,5,2,0.9), transparent);
+  }
+  .curtain-right {
+    right: 0;
+    background: linear-gradient(to left, rgba(10,5,2,0.9), transparent);
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 2;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3rem 2rem 4rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .header-rule {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  .rule-line {
+    flex: 1;
+    max-width: 80px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--gold-dim));
+  }
+  .rule-line.right {
+    background: linear-gradient(to left, transparent, var(--gold-dim));
+  }
+  .rule-diamond {
+    width: 6px; height: 6px;
+    background: var(--gold);
+    transform: rotate(45deg);
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.8rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  .cal-nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    animation: fadeDown 0.6s 0.1s ease both;
+  }
+
+  .month-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+
+  .month-label span {
+    color: var(--gold);
+  }
+
+  .nav-btns {
+    display: flex;
+    gap: 8px;
+  }
+
+  .nav-btn {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    color: var(--text-muted);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .nav-btn:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+    background: var(--gold-bg);
+  }
+
+  .legend {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 1.5rem;
+    animation: fadeDown 0.6s 0.15s ease both;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+  }
+  .ld-free { background: var(--green); }
+  .ld-busy { background: var(--surface2); border: 1px solid var(--border2); }
+  .ld-today { background: var(--gold); }
+
+  .weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+    animation: fadeDown 0.6s 0.2s ease both;
+  }
+  .wday {
+    text-align: center;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 6px 0;
+    font-weight: 400;
+  }
+
+  .days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    animation: fadeUp 0.5s 0.25s ease both;
+  }
+
+  .day {
+    border-radius: 6px;
+    min-height: 72px;
+    padding: 8px 7px 7px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .day.empty {
+    background: transparent;
+    border-color: transparent;
+  }
+  .day.busy {
+    background: var(--busy-bg);
+    border-color: var(--border);
+  }
+  .day.free {
+    background: var(--green-bg);
+    border-color: var(--green-border);
+    cursor: pointer;
+  }
+  .day.free:hover {
+    border-color: var(--green);
+    background: rgba(74,156,111,0.16);
+  }
+  .day.today {
+    border-color: var(--gold-dim);
+  }
+
+  .day-num {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .day.free .day-num { color: var(--green); }
+  .day.busy .day-num { color: var(--text-dim); }
+  .day.today .day-num {
+    background: var(--gold);
+    color: #0e0e0e;
+    font-weight: 500;
+  }
+
+  .event-tag {
+    font-size: 0.65rem;
+    line-height: 1.3;
+    color: #5a5248;
+    background: rgba(255,255,255,0.03);
+    border-radius: 3px;
+    padding: 2px 5px;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .free-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-top: auto;
+    opacity: 0.7;
+  }
+
+  .more-tag {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .panel {
+    margin-top: 2rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    overflow: hidden;
+    animation: fadeUp 0.5s 0.35s ease both;
+  }
+
+  .panel-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-title {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .panel-count {
+    font-size: 0.72rem;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+  }
+
+  .panel-body {
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .event-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .event-row:last-child { border-bottom: none; }
+
+  .ev-date {
+    font-size: 0.75rem;
+    color: var(--gold);
+    min-width: 80px;
+    font-weight: 400;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .ev-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--border2);
+    flex-shrink: 0;
+  }
+
+  .ev-name {
+    font-size: 0.85rem;
+    color: var(--text);
+    font-weight: 300;
+  }
+
+  .empty-panel {
+    padding: 1.5rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  .source-note {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    animation: fadeUp 0.5s 0.4s ease both;
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .error-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #7a3030;
+    font-size: 0.8rem;
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    .wrapper { padding: 2rem 1rem 3rem; }
+    .day { min-height: 54px; padding: 6px 4px; }
+    .event-tag { display: none; }
+    .free-tag { font-size: 0.58rem; }
+  }
+</style>
+</head>
+<body>
+<div class="stage-bg"></div>
+<div class="curtain-left"></div>
+<div class="curtain-right"></div>
+
+<div class="wrapper">
+  <header>
+    <div class="header-rule">
+      <div class="rule-line"></div>
+      <div class="rule-diamond"></div>
+      <div class="rule-line right"></div>
+    </div>
+    <h1>Calendário de Disponibilidade</h1>
+    <p class="subtitle">Datas disponíveis para agendamento</p>
+  </header>
+
+  <div class="cal-nav-row">
+    <div class="month-label" id="month-label">—</div>
+    <div class="nav-btns">
+      <button class="nav-btn" onclick="changeMonth(-1)" aria-label="Mês anterior">&#8592;</button>
+      <button class="nav-btn" onclick="changeMonth(1)" aria-label="Próximo mês">&#8594;</button>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot ld-free"></span> Disponível</div>
+    <div class="legend-item"><span class="legend-dot ld-busy"></span> Ocupado</div>
+    <div class="legend-item"><span class="legend-dot ld-today"></span> Hoje</div>
+  </div>
+
+  <div class="weekdays">
+    <div class="wday">Dom</div>
+    <div class="wday">Seg</div>
+    <div class="wday">Ter</div>
+    <div class="wday">Qua</div>
+    <div class="wday">Qui</div>
+    <div class="wday">Sex</div>
+    <div class="wday">Sáb</div>
+  </div>
+
+  <div class="days-grid" id="days-grid">
+    <div class="loading-state" style="grid-column: 1/-1;">Carregando pauta...</div>
+  </div>
+
+  <div class="panel" id="events-panel">
+    <div class="panel-header">
+      <span class="panel-title">Pauta do mês</span>
+      <span class="panel-count" id="event-count"></span>
+    </div>
+    <div class="panel-body" id="event-list">
+      <div class="loading-state">Carregando...</div>
+    </div>
+  </div>
+
+  <div class="source-note" id="source-note"></div>
+</div>
+
+<script>
+const SHEET_ID = '1ch-WCUQHRXgbAUdr7dPH7tcTRjQ9i3eoC4dFaIKKtJE';
+const API_KEY  = 'AIzaSyAHx-VDQx39YNKGwmHJjRUSCfyMYXE8peI';
+
+const MONTH_NAMES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MONTH_NAMES_SHEET = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+
+const today = new Date();
+let current = { year: today.getFullYear(), month: today.getMonth() };
+
+const cache = {};
+
+async function fetchSheetData(year, month) {
+  const key = `${year}-${month}`;
+  if (cache[key]) return cache[key];
+
+  const sheetName = `PAUTA ${MONTH_NAMES_SHEET[month]}`;
+  const encodedName = encodeURIComponent(sheetName);
+  const range = `${encodedName}!A2:D`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?key=${API_KEY}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const rows = json.values || [];
+
+    const events = [];
+    rows.forEach(row => {
+      const rawDate = row[0];
+      const rawEvent = row[3];
+      if (!rawDate || !rawEvent) return;
+
+      const parts = rawDate.trim().split('/');
+      if (parts.length < 2) return;
+      const day = parseInt(parts[0], 10);
+      const mon = parseInt(parts[1], 10) - 1;
+      const yr  = parts.length === 3 ? parseInt(parts[2], 10) : year;
+
+      if (!isNaN(day) && !isNaN(mon)) {
+        events.push({ day, month: mon, year: yr, name: rawEvent.trim() });
+      }
+    });
+
+    cache[key] = events;
+    return events;
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildEventsMap(events, year, month) {
+  const map = {};
+  events.forEach(ev => {
+    if (ev.month === month) {
+      if (!map[ev.day]) map[ev.day] = [];
+      map[ev.day].push(ev.name);
+    }
+  });
+  return map;
+}
+
+async function render() {
+  const { year, month } = current;
+
+  document.getElementById('month-label').innerHTML =
+    `<span>${MONTH_NAMES_PT[month]}</span> ${year}`;
+
+  document.getElementById('days-grid').innerHTML =
+    `<div class="loading-state" style="grid-column:1/-1">Carregando pauta...</div>`;
+  document.getElementById('event-list').innerHTML =
+    `<div class="loading-state">Carregando...</div>`;
+
+  const events = await fetchSheetData(year, month);
+
+  if (events === null) {
+    document.getElementById('days-grid').innerHTML =
+      `<div class="error-state" style="grid-column:1/-1">Não foi possível carregar os dados. Verifique as permissões da planilha.</div>`;
+    document.getElementById('event-list').innerHTML =
+      `<div class="error-state">Erro ao carregar eventos.</div>`;
+    return;
+  }
+
+  const evMap = buildEventsMap(events, year, month);
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const grid = document.getElementById('days-grid');
+  grid.innerHTML = '';
+
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'day empty';
+    grid.appendChild(el);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const el = document.createElement('div');
+    const isBusy = !!evMap[d];
+    const isToday = (year === today.getFullYear() && month === today.getMonth() && d === today.getDate());
+
+    el.className = 'day ' + (isBusy ? 'busy' : 'free') + (isToday ? ' today' : '');
+
+    const numDiv = document.createElement('div');
+    numDiv.className = 'day-num';
+    numDiv.textContent = d;
+    el.appendChild(numDiv);
+
+    if (isBusy) {
+      const evs = evMap[d];
+      const tag = document.createElement('div');
+      tag.className = 'event-tag';
+      tag.textContent = evs[0];
+      tag.title = evs.join('\n');
+      el.appendChild(tag);
+      if (evs.length > 1) {
+        const more = document.createElement('div');
+        more.className = 'more-tag';
+        more.textContent = `+${evs.length - 1} evento(s)`;
+        el.appendChild(more);
+      }
+    } else {
+      const lbl = document.createElement('div');
+      lbl.className = 'free-tag';
+      lbl.textContent = 'Livre';
+      el.appendChild(lbl);
+    }
+
+    grid.appendChild(el);
+  }
+
+  const list = document.getElementById('event-list');
+  if (events.length === 0) {
+    list.innerHTML = '<div class="empty-panel">Nenhum evento agendado neste mês.</div>';
+    document.getElementById('event-count').textContent = '';
+  } else {
+    const monthEvents = events.filter(e => e.month === month);
+    if (monthEvents.length === 0) {
+      list.innerHTML = '<div class="empty-panel">Nenhum evento agendado neste mês.</div>';
+      document.getElementById('event-count').textContent = '';
+    } else {
+      document.getElementById('event-count').textContent = monthEvents.length + ' evento(s)';
+      const seen = new Set();
+      list.innerHTML = '';
+      monthEvents.forEach(ev => {
+        const k = `${ev.day}-${ev.name}`;
+        if (seen.has(k)) return;
+        seen.add(k);
+        const row = document.createElement('div');
+        row.className = 'event-row';
+        const dateStr = String(ev.day).padStart(2,'0') + '/' + String(ev.month+1).padStart(2,'0');
+        row.innerHTML = `<span class="ev-date">${dateStr}</span><span class="ev-dot"></span><span class="ev-name">${ev.name}</span>`;
+        list.appendChild(row);
+      });
+    }
+  }
+
+  document.getElementById('source-note').textContent =
+    'Atualizado em tempo real · Fonte: Google Sheets';
+}
+
+function changeMonth(delta) {
+  let { year, month } = current;
+  month += delta;
+  if (month > 11) { month = 0; year++; }
+  if (month < 0)  { month = 11; year--; }
+  current = { year, month };
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
